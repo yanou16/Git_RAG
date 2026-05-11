@@ -56,12 +56,11 @@ class IngestResponse(BaseModel):
 class QueryRequest(BaseModel):
     repo_url: str
     question: str = Field(..., min_length=3, max_length=500)
-    k: int = Field(default=5, ge=1, le=20, description="Chunks à retriever")
+    k: int = Field(default=5, ge=1, le=20, description="Final chunks envoyés au LLM")
     temperature: float = Field(default=0.1, ge=0.0, le=1.0)
-    language: Optional[str] = Field(
-        default=None,
-        description="Filtrer sur un langage spécifique"
-    )
+    language: Optional[str] = Field(default=None, description="Filtrer sur un langage")
+    use_reranking: bool = Field(default=True, description="Cohere reranking (si clé dispo)")
+    use_hybrid: bool = Field(default=True, description="BM25 + semantic hybrid search")
 
 
 class Source(BaseModel):
@@ -70,6 +69,7 @@ class Source(BaseModel):
     end_line: Optional[int]
     language: str
     similarity_score: float
+    rerank_score: Optional[float] = None
     excerpt: str = Field(..., description="200 chars du chunk")
 
 
@@ -83,6 +83,7 @@ class QueryResponse(BaseModel):
     tokens_used: int
     model: str
     k_retrieved: int
+    pipeline: str = Field(description="semantic | hybrid | hybrid+rerank")
 
 
 # ─── HEALTH ────────────────────────────────────────────────

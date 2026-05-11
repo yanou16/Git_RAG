@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     MAX_CHUNKS_PER_FILE: int = 50
     MIN_CHUNK_SIZE_CHARS: int = 50
 
+    # Cohere Reranking (optional — falls back gracefully if empty)
+    COHERE_API_KEY: str = ""
+    COHERE_RERANK_MODEL: str = "rerank-v3.5"
+
     # Retry config
     MAX_RETRIES: int = 3
     RETRY_BASE_DELAY_SECONDS: float = 1.0
