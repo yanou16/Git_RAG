@@ -42,9 +42,11 @@ class Settings(BaseSettings):
     RETRY_BASE_DELAY_SECONDS: float = 1.0
     RETRY_MAX_DELAY_SECONDS: float = 30.0
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
+    model_config = {
+        "env_file": ".env",
+        "case_sensitive": True,
+        "extra": "ignore",  # ignore unknown env vars (OPENAI_API_KEY etc.)
+    }
 
 
 @lru_cache()

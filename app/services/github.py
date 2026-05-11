@@ -29,7 +29,8 @@ class GitHubService:
         self.client = httpx.AsyncClient(
             base_url=settings.GITHUB_API_BASE,
             headers=headers,
-            timeout=httpx.Timeout(settings.GITHUB_TIMEOUT_SECONDS)
+            timeout=httpx.Timeout(settings.GITHUB_TIMEOUT_SECONDS),
+            follow_redirects=True,
         )
 
     @with_retry(max_retries=3)

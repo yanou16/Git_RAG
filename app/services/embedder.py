@@ -10,10 +10,11 @@ settings = get_settings()
 
 class EmbedderService:
     def __init__(self):
-        self.client = AsyncOpenAI(
-            base_url=settings.ANIMUSAI_BASE_URL,
-            api_key=settings.ANIMUSAI_API_KEY,
-        )
+        # Use custom base_url only when ANIMUSAI_BASE_URL differs from OpenAI default
+        kwargs = {"api_key": settings.ANIMUSAI_API_KEY}
+        if settings.ANIMUSAI_BASE_URL and "openai.com" not in settings.ANIMUSAI_BASE_URL:
+            kwargs["base_url"] = settings.ANIMUSAI_BASE_URL
+        self.client = AsyncOpenAI(**kwargs)
         self.model = settings.EMBEDDING_MODEL
 
     @with_retry(max_retries=3)
