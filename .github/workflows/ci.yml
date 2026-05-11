@@ -1,0 +1,55 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Lint
+        run: |
+          ruff check app/
+          black --check app/
+
+      - name: Test
+        env:
+          ANIMUSAI_API_KEY: "test_key"
+          GROQ_API_KEY: "test_key"
+          CHROMA_PERSIST_DIR: "/tmp/chroma_test"
+        run: |
+          pytest tests/ -v --cov=app --cov-report=term-missing
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t gitrag:latest .
+
+      - name: Test Docker image
+        run: |
+          docker run -d --name gitrag_test \
+            -e ANIMUSAI_API_KEY=test \
+            -e GROQ_API_KEY=test \
+            -p 8000:8000 gitrag:latest
+          sleep 10
+          curl -f http://localhost:8000/health || exit 1
+          docker stop gitrag_test
