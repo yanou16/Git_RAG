@@ -10,10 +10,14 @@ settings = get_settings()
 
 class EmbedderService:
     def __init__(self):
+        # Strip whitespace/newlines — HF Secrets sometimes include a trailing \n
+        api_key  = (settings.ANIMUSAI_API_KEY or "").strip()
+        base_url = (settings.ANIMUSAI_BASE_URL or "").strip()
+
         # Use custom base_url only when ANIMUSAI_BASE_URL differs from OpenAI default
-        kwargs = {"api_key": settings.ANIMUSAI_API_KEY}
-        if settings.ANIMUSAI_BASE_URL and "openai.com" not in settings.ANIMUSAI_BASE_URL:
-            kwargs["base_url"] = settings.ANIMUSAI_BASE_URL
+        kwargs = {"api_key": api_key}
+        if base_url and "openai.com" not in base_url:
+            kwargs["base_url"] = base_url
         self.client = AsyncOpenAI(**kwargs)
         self.model = settings.EMBEDDING_MODEL
 
