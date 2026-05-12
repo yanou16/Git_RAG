@@ -1,651 +1,587 @@
 """
 GitRAG — Streamlit Frontend
-GitHub Codebase Q&A powered by RAG (Retrieval-Augmented Generation)
+GitHub Codebase Q&A powered by RAG
 
-Design principles applied (UI/UX Pro Max):
-- Dark developer tool aesthetic (#0d1117 bg, #2563eb accent, #10b981 success)
-- Contrast ratios ≥ 4.5:1 for all text (WCAG AA)
-- 8dp spacing rhythm throughout
-- Loading feedback within 150ms (spinners on every async call)
-- Empty states with clear guidance
-- Error messages with recovery path
-- Semantic color: blue=info, green=success, red=error, amber=warning
+Design system: Flat Dark — GitHub/Linear/Vercel aesthetic
+- bg #0d1117 · surface #161b22 · accent #58a6ff
+- Inter UI + JetBrains Mono code
+- Contrast ≥ 4.5:1 (WCAG AA)
+- 8dp spacing rhythm
+- Lazy health check (cached 60s) — no error flash on load
+- Default API URL points to live HuggingFace Space
 """
 
 import streamlit as st
 import requests
-import json
 import time
+
+# ── Constants ─────────────────────────────────────────────────────────────
+DEFAULT_API_URL = "https://yanou16-gitgub-rag.hf.space"
 
 # ── Page config ───────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="GitRAG — Codebase Q&A",
-    page_icon="⚡",
-    layout="wide",
+    page_title="GitRAG",
+    page_icon="◈",
+    layout="centered",
     initial_sidebar_state="expanded",
 )
 
-# ── Design tokens & global CSS ────────────────────────────────────────────
-st.markdown("""
+# ── CSS Design System ─────────────────────────────────────────────────────
+CSS = """
 <style>
-  /* ── Base dark theme ── */
-  [data-testid="stAppViewContainer"] {
-    background-color: #0d1117;
-    color: #e6edf3;
-  }
-  [data-testid="stSidebar"] {
-    background-color: #161b22;
-    border-right: 1px solid #21262d;
-  }
-  [data-testid="stSidebar"] * { color: #c9d1d9 !important; }
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
-  /* ── Typography ── */
-  h1, h2, h3 { color: #e6edf3 !important; letter-spacing: -0.02em; }
-  p, label, span { color: #8b949e; }
+/* ── Design tokens ── */
+:root {
+  --bg:            #0d1117;
+  --bg-surface:    #161b22;
+  --bg-code:       #1c2128;
+  --border:        #30363d;
+  --border-subtle: #21262d;
+  --text-1:        #e6edf3;
+  --text-2:        #8b949e;
+  --text-3:        #6e7681;
+  --accent:        #58a6ff;
+  --accent-dim:    rgba(88,166,255,0.12);
+  --success:       #3fb950;
+  --success-dim:   rgba(63,185,80,0.1);
+  --warning:       #d29922;
+  --warning-dim:   rgba(210,153,34,0.1);
+  --error:         #f85149;
+  --error-dim:     rgba(248,81,73,0.08);
+  --purple:        #bc8cff;
+  --purple-dim:    rgba(188,140,255,0.12);
+  --r-sm: 4px; --r-md: 8px; --r-lg: 12px;
+  --font: 'Inter', system-ui, -apple-system, sans-serif;
+  --mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
 
-  /* ── Inputs ── */
-  [data-testid="stTextInput"] input,
-  [data-testid="stTextArea"] textarea,
-  [data-testid="stSelectbox"] select {
-    background-color: #161b22 !important;
-    border: 1px solid #30363d !important;
-    color: #e6edf3 !important;
-    border-radius: 8px !important;
-  }
-  [data-testid="stTextInput"] input:focus,
-  [data-testid="stTextArea"] textarea:focus {
-    border-color: #2563eb !important;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
-  }
+/* ── Base ── */
+.stApp { background: var(--bg) !important; font-family: var(--font) !important; }
+#MainMenu, footer { visibility: hidden; }
+.block-container { padding: 2rem 1rem 4rem !important; max-width: 800px !important; }
 
-  /* ── Buttons ── */
-  [data-testid="stButton"] > button {
-    background-color: #2563eb !important;
-    color: #ffffff !important;
+/* ── Sidebar ── */
+[data-testid="stSidebar"] {
+    background: var(--bg-surface) !important;
+    border-right: 1px solid var(--border) !important;
+}
+
+/* ── Text ── */
+h1,h2,h3,h4 { font-family: var(--font) !important; font-weight: 600 !important; color: var(--text-1) !important; }
+p, li, span, div { font-family: var(--font) !important; }
+label { color: var(--text-2) !important; font-size: 12px !important; font-weight: 500 !important; letter-spacing: 0.04em !important; }
+
+/* ── Inputs ── */
+.stTextInput > div > div > input,
+.stTextArea > div > div > textarea {
+    background: var(--bg-surface) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--r-md) !important;
+    color: var(--text-1) !important;
+    font-family: var(--font) !important;
+    font-size: 14px !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+}
+.stTextInput > div > div > input:focus,
+.stTextArea > div > div > textarea:focus {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 3px var(--accent-dim) !important;
+    outline: none !important;
+}
+.stTextInput > div > div > input::placeholder,
+.stTextArea > div > div > textarea::placeholder { color: var(--text-3) !important; }
+
+/* ── Buttons ── */
+.stButton > button {
+    background: var(--accent) !important;
     border: none !important;
-    border-radius: 8px !important;
+    border-radius: var(--r-md) !important;
+    color: #0d1117 !important;
+    font-family: var(--font) !important;
+    font-size: 14px !important;
     font-weight: 600 !important;
     padding: 10px 20px !important;
-    transition: all 150ms ease-out !important;
-    min-height: 44px !important;  /* touch target minimum */
-  }
-  [data-testid="stButton"] > button:hover {
-    background-color: #1d4ed8 !important;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35) !important;
-  }
-  [data-testid="stButton"] > button:active { transform: translateY(0); }
+    transition: background 0.15s, transform 0.1s !important;
+    cursor: pointer !important;
+    letter-spacing: 0.01em !important;
+}
+.stButton > button:hover { background: #79b8ff !important; transform: translateY(-1px) !important; }
+.stButton > button:active { transform: translateY(0) !important; }
 
-  /* ── Dividers ── */
-  hr { border-color: #21262d !important; margin: 24px 0; }
+/* Secondary style via key trick */
+.stButton [kind="secondary"] > button,
+button[data-testid*="secondary"] {
+    background: transparent !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text-1) !important;
+}
 
-  /* ── Source cards ── */
-  .source-card {
-    background: #161b22;
-    border: 1px solid #21262d;
-    border-radius: 10px;
-    padding: 16px 20px;
-    margin-bottom: 12px;
-    transition: border-color 150ms ease-out;
-  }
-  .source-card:hover { border-color: #30363d; }
-  .source-card .file-path {
-    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
-    font-size: 13px;
-    color: #79c0ff;
-    font-weight: 500;
-  }
-  .source-card .lines {
-    font-size: 12px;
-    color: #8b949e;
-    margin-top: 4px;
-  }
-  .source-card .excerpt {
-    font-family: monospace;
-    font-size: 12px;
-    color: #8b949e;
-    background: #0d1117;
-    border-radius: 6px;
-    padding: 10px 12px;
-    margin-top: 12px;
-    white-space: pre-wrap;
-    word-break: break-all;
-    border-left: 3px solid #21262d;
-  }
+/* ── Checkboxes / Sliders ── */
+.stCheckbox label { font-size: 13px !important; color: var(--text-1) !important; letter-spacing: 0 !important; }
+.stSlider label { font-size: 11px !important; text-transform: uppercase !important; letter-spacing: 0.06em !important; color: var(--text-3) !important; }
 
-  /* ── Score badge ── */
-  .score-badge {
-    display: inline-block;
-    padding: 2px 10px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.03em;
-  }
-  .score-high  { background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); }
-  .score-mid   { background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
-  .score-low   { background: rgba(107,114,128,0.15); color: #6b7280; border: 1px solid rgba(107,114,128,0.3); }
+/* ── Metric ── */
+[data-testid="stMetric"] {
+    background: var(--bg-surface) !important;
+    border: 1px solid var(--border-subtle) !important;
+    border-radius: var(--r-md) !important;
+    padding: 12px 16px !important;
+}
+[data-testid="stMetricLabel"] { color: var(--text-3) !important; font-size: 11px !important; text-transform: uppercase !important; letter-spacing: 0.06em !important; }
+[data-testid="stMetricValue"] { color: var(--text-1) !important; font-family: var(--mono) !important; font-size: 20px !important; }
 
-  /* ── Pipeline badge ── */
-  .pipeline-badge {
-    display: inline-block;
-    padding: 3px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-  .pipeline-hybrid-rerank { background: rgba(139,92,246,0.15); color: #a78bfa; border: 1px solid rgba(139,92,246,0.3); }
-  .pipeline-hybrid        { background: rgba(37,99,235,0.15);  color: #60a5fa; border: 1px solid rgba(37,99,235,0.3); }
-  .pipeline-semantic      { background: rgba(107,114,128,0.15); color: #9ca3af; border: 1px solid rgba(107,114,128,0.3); }
+/* ── Expander ── */
+[data-testid="stExpander"] {
+    background: var(--bg-surface) !important;
+    border: 1px solid var(--border-subtle) !important;
+    border-radius: var(--r-md) !important;
+}
+[data-testid="stExpander"] summary { color: var(--text-2) !important; font-size: 13px !important; }
 
-  /* ── Metric cards ── */
-  .metric-row {
-    display: flex;
-    gap: 12px;
-    margin: 16px 0;
-    flex-wrap: wrap;
-  }
-  .metric-card {
-    background: #161b22;
-    border: 1px solid #21262d;
-    border-radius: 8px;
-    padding: 12px 18px;
-    min-width: 120px;
-  }
-  .metric-card .label {
-    font-size: 11px;
-    color: #6b7280;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-weight: 600;
-  }
-  .metric-card .value {
-    font-size: 18px;
-    font-weight: 700;
-    color: #e6edf3;
-    margin-top: 4px;
-    font-variant-numeric: tabular-nums;
-  }
+/* ── Divider ── */
+hr { border: none !important; border-top: 1px solid var(--border-subtle) !important; margin: 24px 0 !important; }
 
-  /* ── Alert boxes ── */
-  .alert-error {
-    background: rgba(239,68,68,0.1);
-    border: 1px solid rgba(239,68,68,0.3);
-    border-radius: 8px;
-    padding: 14px 18px;
-    color: #fca5a5;
-    font-size: 14px;
-  }
-  .alert-success {
-    background: rgba(16,185,129,0.1);
-    border: 1px solid rgba(16,185,129,0.3);
-    border-radius: 8px;
-    padding: 14px 18px;
-    color: #6ee7b7;
-    font-size: 14px;
-  }
-  .alert-info {
-    background: rgba(37,99,235,0.1);
-    border: 1px solid rgba(37,99,235,0.3);
-    border-radius: 8px;
-    padding: 14px 18px;
-    color: #93c5fd;
-    font-size: 14px;
-  }
+/* ── Custom classes ── */
 
-  /* ── Answer box ── */
-  .answer-box {
-    background: #161b22;
-    border: 1px solid #21262d;
-    border-left: 3px solid #2563eb;
-    border-radius: 10px;
-    padding: 20px 24px;
-    font-size: 15px;
-    line-height: 1.7;
-    color: #c9d1d9;
-  }
+/* Header */
+.gr-header { border-bottom: 1px solid var(--border-subtle); padding-bottom: 20px; margin-bottom: 28px; }
+.gr-logo { font-size: 22px; font-weight: 700; color: var(--text-1); letter-spacing: -0.5px; font-family: var(--font) !important; }
+.gr-logo span { color: var(--accent); }
+.gr-tagline { font-size: 13px; color: var(--text-2); margin-top: 4px; line-height: 1.5; }
 
-  /* ── Section headers ── */
-  .section-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 16px;
-  }
-  .section-number {
-    width: 28px; height: 28px;
-    background: #2563eb;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 13px; font-weight: 700; color: white;
-    flex-shrink: 0;
-  }
+/* Section label */
+.gr-label {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--text-3); margin-bottom: 8px;
+}
 
-  /* ── Checkbox / radio ── */
-  [data-testid="stCheckbox"] label { color: #c9d1d9 !important; }
+/* Status dots */
+.dot-ok  { display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--success); margin-right:6px; box-shadow:0 0 6px rgba(63,185,80,.5); }
+.dot-err { display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--error);   margin-right:6px; }
+.dot-chk { display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--warning); margin-right:6px; animation:blink 2s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
 
-  /* ── Slider ── */
-  [data-testid="stSlider"] { color: #c9d1d9; }
+/* Alerts */
+.gr-ok   { background:var(--success-dim); border:1px solid rgba(63,185,80,.3);  border-radius:var(--r-md); padding:11px 14px; color:#3fb950; font-size:13px; margin:8px 0; }
+.gr-err  { background:var(--error-dim);   border:1px solid rgba(248,81,73,.3); border-radius:var(--r-md); padding:11px 14px; color:#f85149; font-size:13px; margin:8px 0; }
+.gr-info { background:var(--accent-dim);  border:1px solid rgba(88,166,255,.2); border-radius:var(--r-md); padding:11px 14px; color:var(--text-2); font-size:13px; margin:8px 0; }
 
-  /* ── Remove Streamlit branding ── */
-  #MainMenu, footer, header { visibility: hidden; }
-  .block-container { padding-top: 2rem; max-width: 1200px; }
+/* Answer box */
+.gr-answer {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    padding: 20px 22px;
+    font-size: 14px; line-height: 1.75;
+    color: var(--text-1); margin: 12px 0;
+    white-space: pre-wrap; word-break: break-word;
+}
+
+/* Source card */
+.gr-source {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-md);
+    padding: 13px 15px; margin-bottom: 8px;
+    transition: border-color .15s;
+}
+.gr-source:hover { border-color: var(--border); }
+.gr-path { font-family: var(--mono); font-size: 12px; color: var(--accent); font-weight: 500; margin-bottom: 5px; }
+.gr-meta { display:flex; gap:10px; align-items:center; margin-bottom:8px; flex-wrap:wrap; }
+.gr-excerpt {
+    font-family: var(--mono); font-size: 11.5px; color: var(--text-2);
+    background: var(--bg-code); border-radius: var(--r-sm); padding: 8px 11px;
+    line-height: 1.55; overflow:hidden;
+    display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical;
+}
+
+/* Badges */
+.b { display:inline-flex; align-items:center; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:600; }
+.b-blue   { background:var(--accent-dim);   color:#58a6ff; border:1px solid rgba(88,166,255,.3); }
+.b-purple { background:var(--purple-dim);   color:#bc8cff; border:1px solid rgba(188,140,255,.3); }
+.b-green  { background:var(--success-dim);  color:#3fb950; border:1px solid rgba(63,185,80,.3); }
+.b-gray   { background:rgba(110,118,129,.12); color:#8b949e; border:1px solid rgba(110,118,129,.25); }
+.b-orange { background:var(--warning-dim);  color:#d29922; border:1px solid rgba(210,153,34,.3); }
+
+/* Score coloring */
+.sc-hi { color:#3fb950 !important; } .sc-md { color:#d29922 !important; } .sc-lo { color:#6e7681 !important; }
+
+/* Empty state */
+.gr-empty { text-align:center; padding:52px 24px; }
+.gr-empty-icon { font-size:36px; opacity:.35; margin-bottom:14px; }
+.gr-empty-title { font-size:15px; font-weight:600; color:var(--text-2); margin-bottom:8px; }
+.gr-empty-desc { font-size:13px; color:var(--text-3); line-height:1.6; max-width:360px; margin:0 auto 20px; }
+.gr-chips { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+.gr-chip { background:var(--bg-surface); border:1px solid var(--border); border-radius:20px; padding:4px 12px; font-size:11.5px; color:var(--text-2); font-family:var(--mono); }
+
+/* Code in answer */
+.gr-answer code { font-family:var(--mono) !important; font-size:12px !important; background:var(--bg-code) !important; padding:2px 5px !important; border-radius:3px !important; color:var(--accent) !important; }
 </style>
-""", unsafe_allow_html=True)
-
-
-# ── Session state init ────────────────────────────────────────────────────
-for key, default in {
-    "repo_url": "",
-    "repo_indexed": False,
-    "last_answer": None,
-    "last_sources": [],
-    "last_metrics": {},
-    "ingest_stats": None,
-    "api_healthy": None,
-}.items():
-    if key not in st.session_state:
-        st.session_state[key] = default
-
+"""
 
 # ── Helpers ───────────────────────────────────────────────────────────────
-def api_post(url: str, payload: dict, timeout: int = 120) -> tuple[dict | None, str | None]:
-    """POST to API, returns (data, error_message)."""
+def api_call(base: str, method: str, endpoint: str, payload: dict = None, timeout: int = 120):
+    url = f"{base.rstrip('/')}/{endpoint.lstrip('/')}"
     try:
-        r = requests.post(url, json=payload, timeout=timeout)
-        if r.status_code == 200:
-            return r.json(), None
-        try:
-            detail = r.json().get("detail", r.text)
-            if isinstance(detail, dict):
-                detail = detail.get("detail", str(detail))
-        except Exception:
-            detail = r.text
-        return None, f"HTTP {r.status_code} — {detail}"
+        if method == "POST":
+            r = requests.post(url, json=payload, timeout=timeout)
+        else:
+            r = requests.get(url, timeout=timeout)
+        r.raise_for_status()
+        return r.json(), None
     except requests.exceptions.ConnectionError:
-        return None, "Cannot reach the API. Is the server running?"
+        return None, f"Cannot connect to `{base}`. Is the API running?"
     except requests.exceptions.Timeout:
         return None, "Request timed out. The repo may be large — try again."
+    except requests.exceptions.HTTPError as e:
+        try:
+            detail = e.response.json().get("detail", str(e))
+            if isinstance(detail, dict):
+                code = detail.get("code", "")
+                msg  = detail.get("detail", str(detail))
+                if code == "REPO_NOT_INDEXED":
+                    return None, "REPO_NOT_INDEXED"
+                return None, msg
+        except Exception:
+            pass
+        return None, f"HTTP {e.response.status_code}: {e}"
     except Exception as e:
         return None, str(e)
 
 
-def api_get(url: str, timeout: int = 10) -> tuple[dict | None, str | None]:
-    try:
-        r = requests.get(url, timeout=timeout)
-        return r.json() if r.status_code == 200 else None, None
-    except Exception:
-        return None, "Cannot reach the API."
+def pipeline_badge(p: str) -> str:
+    if "rerank" in p and "hybrid" in p:
+        return '<span class="b b-purple">hybrid + rerank</span>'
+    if "hybrid" in p:
+        return '<span class="b b-blue">hybrid</span>'
+    if "rerank" in p:
+        return '<span class="b b-orange">semantic + rerank</span>'
+    return '<span class="b b-gray">semantic</span>'
 
 
-def score_class(score: float) -> str:
-    if score >= 0.75: return "score-high"
-    if score >= 0.5:  return "score-mid"
-    return "score-low"
+def score_cls(v: float) -> str:
+    return "sc-hi" if v >= 0.8 else ("sc-md" if v >= 0.5 else "sc-lo")
 
 
-def pipeline_class(pipeline: str) -> str:
-    if "rerank" in pipeline: return "pipeline-hybrid-rerank"
-    if "hybrid" in pipeline: return "pipeline-hybrid"
-    return "pipeline-semantic"
+# ── Session state ─────────────────────────────────────────────────────────
+DEFAULTS = {
+    "api_url":        DEFAULT_API_URL,
+    "repo_url":       "",
+    "repo_indexed":   False,
+    "answer":         None,
+    "sources":        [],
+    "metrics":        {},
+    "health_ok":      None,
+    "health_data":    {},
+    "health_ts":      0.0,
+}
+for k, v in DEFAULTS.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
 
 
-def pipeline_label(pipeline: str) -> str:
-    mapping = {
-        "hybrid+rerank": "Hybrid + Rerank",
-        "semantic+rerank": "Semantic + Rerank",
-        "hybrid": "Hybrid BM25",
-        "semantic": "Semantic",
-    }
-    return mapping.get(pipeline, pipeline)
+# ── CSS inject ────────────────────────────────────────────────────────────
+st.markdown(CSS, unsafe_allow_html=True)
 
 
 # ── Sidebar ───────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("## ⚡ GitRAG")
-    st.markdown("<p style='color:#6b7280;font-size:13px;margin-top:-8px'>GitHub Codebase Q&A via RAG</p>", unsafe_allow_html=True)
-    st.markdown("---")
-
-    st.markdown("### Configuration")
-    api_url = st.text_input(
-        "API URL",
-        value="http://localhost:7860",
-        help="URL of the GitRAG FastAPI backend",
-        placeholder="http://localhost:7860"
-    )
-    api_url = api_url.rstrip("/")
-
-    # Health check
-    if st.button("Check API Health", use_container_width=True):
-        health, err = api_get(f"{api_url}/health")
-        if health:
-            status = health.get("status", "unknown")
-            color = "#10b981" if status == "healthy" else "#f59e0b"
-            st.markdown(f"""
-            <div style='background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);
-                        border-radius:8px;padding:12px;margin-top:8px;'>
-              <div style='color:{color};font-weight:700;font-size:13px;'>● {status.upper()}</div>
-              <div style='color:#6b7280;font-size:12px;margin-top:4px;'>
-                v{health.get('version','?')} · up {int(health.get('uptime_seconds',0))}s
-              </div>
-              <div style='color:#6b7280;font-size:12px;'>
-                ChromaDB: {health.get('chroma_status','?')}
-              </div>
-            </div>
-            """, unsafe_allow_html=True)
-        else:
-            st.markdown(f"<div class='alert-error'>❌ {err}</div>", unsafe_allow_html=True)
-
-    st.markdown("---")
-
-    # Metrics
-    st.markdown("### Live Metrics")
-    if st.button("Refresh Metrics", use_container_width=True):
-        metrics, _ = api_get(f"{api_url}/metrics")
-        if metrics:
-            st.markdown(f"""
-            <div style='display:flex;flex-direction:column;gap:8px;margin-top:8px;'>
-              <div style='display:flex;justify-content:space-between;'>
-                <span style='color:#6b7280;font-size:12px;'>Indexed repos</span>
-                <span style='color:#e6edf3;font-weight:600;font-size:13px;'>{metrics.get('indexed_repos',0)}</span>
-              </div>
-              <div style='display:flex;justify-content:space-between;'>
-                <span style='color:#6b7280;font-size:12px;'>Total chunks</span>
-                <span style='color:#e6edf3;font-weight:600;font-size:13px;'>{metrics.get('total_chunks',0):,}</span>
-              </div>
-              <div style='display:flex;justify-content:space-between;'>
-                <span style='color:#6b7280;font-size:12px;'>Total queries</span>
-                <span style='color:#e6edf3;font-weight:600;font-size:13px;'>{metrics.get('total_queries',0)}</span>
-              </div>
-              <div style='display:flex;justify-content:space-between;'>
-                <span style='color:#6b7280;font-size:12px;'>Avg latency</span>
-                <span style='color:#e6edf3;font-weight:600;font-size:13px;'>{metrics.get('avg_query_latency_ms',0):.0f} ms</span>
-              </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-    st.markdown("---")
-    st.markdown("""
-    <div style='font-size:12px;color:#484f58;line-height:1.6;'>
-      <strong style='color:#6b7280;'>About</strong><br/>
-      GitRAG indexes any public GitHub repo and answers developer questions with cited sources.<br/><br/>
-      <strong style='color:#6b7280;'>Pipeline</strong><br/>
-      GitHub API → AST Chunking → OpenAI Embeddings → ChromaDB → BM25+RRF → Cohere Rerank → Groq LLM
-    </div>
-    """, unsafe_allow_html=True)
-
-
-# ── Main content ──────────────────────────────────────────────────────────
-st.markdown("""
-<div style='margin-bottom:32px;'>
-  <h1 style='font-size:2rem;font-weight:800;color:#e6edf3;margin-bottom:6px;'>
-    ⚡ GitRAG
-  </h1>
-  <p style='color:#8b949e;font-size:16px;margin:0;'>
-    Ask questions about any public GitHub repository in natural language.
-    Get answers with exact file paths and line numbers.
-  </p>
-</div>
-""", unsafe_allow_html=True)
-
-col_left, col_right = st.columns([1, 1], gap="large")
-
-# ── LEFT COLUMN: Index a repo ─────────────────────────────────────────────
-with col_left:
-    st.markdown("""
-    <div class='section-header'>
-      <div class='section-number'>1</div>
-      <h3 style='margin:0;font-size:1.1rem;color:#e6edf3;'>Index a Repository</h3>
-    </div>
-    """, unsafe_allow_html=True)
-
-    repo_url_input = st.text_input(
-        "GitHub Repository URL",
-        value=st.session_state.repo_url,
-        placeholder="https://github.com/tiangolo/fastapi",
-        label_visibility="collapsed",
+    st.markdown(
+        '<div style="margin-bottom:16px">'
+        '<div style="font-size:16px;font-weight:700;color:#e6edf3;letter-spacing:-.3px">◈ GitRAG</div>'
+        '<div style="font-size:11px;color:#6e7681;margin-top:2px">GitHub Codebase Q&A</div>'
+        '</div>',
+        unsafe_allow_html=True,
     )
 
-    with st.expander("Advanced options", expanded=False):
-        col_b, col_m = st.columns(2)
-        with col_b:
-            branch = st.text_input("Branch", value="main", help="Branch to index")
-        with col_m:
-            max_files = st.slider("Max files", 10, 500, 100, 10,
-                                  help="Limit files to index (performance)")
-        force_reindex = st.checkbox(
-            "Force re-index",
-            help="Re-index even if this repo is already cached"
+    # ── API URL ──
+    st.markdown('<div class="gr-label">API Endpoint</div>', unsafe_allow_html=True)
+    new_url = st.text_input(
+        "api_url_input", label_visibility="collapsed",
+        value=st.session_state.api_url,
+        placeholder="https://yanou16-gitgub-rag.hf.space",
+        key="api_url_input",
+    )
+    if new_url and new_url != st.session_state.api_url:
+        st.session_state.api_url  = new_url
+        st.session_state.health_ok = None
+        st.session_state.health_ts  = 0.0
+
+    # ── Health (cached 60 s) ──
+    now = time.time()
+    if now - st.session_state.health_ts > 60 or st.session_state.health_ok is None:
+        data, err = api_call(st.session_state.api_url, "GET", "/health", timeout=8)
+        st.session_state.health_ok   = (data is not None and data.get("status") == "healthy")
+        st.session_state.health_data = data or {}
+        st.session_state.health_ts   = now
+
+    if st.session_state.health_ok:
+        v = st.session_state.health_data.get("version", "1.0")
+        q = st.session_state.health_data.get("total_queries", 0)
+        st.markdown(
+            f'<div style="display:flex;align-items:center;margin:8px 0 2px">'
+            f'<span class="dot-ok"></span>'
+            f'<span style="font-size:12px;color:#3fb950;font-weight:500">API Online</span>'
+            f'</div>'
+            f'<div style="font-size:11px;color:#6e7681;padding-left:13px;margin-bottom:8px">'
+            f'v{v} · {q} queries served</div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            '<div style="display:flex;align-items:center;margin:8px 0 2px">'
+            '<span class="dot-err"></span>'
+            '<span style="font-size:12px;color:#f85149;font-weight:500">Offline</span>'
+            '</div>'
+            '<div style="font-size:11px;color:#6e7681;padding-left:13px;margin-bottom:8px">'
+            'Check the URL above</div>',
+            unsafe_allow_html=True,
         )
 
-    ingest_btn = st.button("Index Repository", use_container_width=True, type="primary")
+    if st.button("Refresh Status", use_container_width=True):
+        st.session_state.health_ts = 0.0
+        st.rerun()
 
-    if ingest_btn:
-        if not repo_url_input or "github.com" not in repo_url_input:
-            st.markdown("<div class='alert-error'>❌ Please enter a valid GitHub URL (github.com/...)</div>",
-                        unsafe_allow_html=True)
-        else:
-            with st.spinner("Fetching files, chunking & embedding... This may take 30–120 seconds for large repos."):
-                data, err = api_post(f"{api_url}/ingest", {
-                    "repo_url": repo_url_input,
-                    "branch": branch,
-                    "max_files": max_files,
-                    "force_reindex": force_reindex,
-                })
+    st.markdown("---")
 
-            if err:
-                st.markdown(f"<div class='alert-error'>❌ {err}</div>", unsafe_allow_html=True)
-            elif data:
-                st.session_state.repo_url = repo_url_input
-                st.session_state.repo_indexed = True
-                st.session_state.ingest_stats = data
+    # ── Search settings ──
+    st.markdown('<div class="gr-label">Search Settings</div>', unsafe_allow_html=True)
+    k             = st.slider("Results (k)", 1, 20, 5)
+    use_hybrid    = st.checkbox("Hybrid search  (BM25 + RRF)", value=True)
+    use_reranking = st.checkbox("Cohere reranking", value=True)
 
-                if data.get("was_cached"):
-                    st.markdown("""
-                    <div class='alert-info'>
-                      ⚡ Already indexed — using cached version. Enable "Force re-index" to refresh.
-                    </div>""", unsafe_allow_html=True)
-                else:
-                    st.markdown(f"""
-                    <div class='alert-success'>
-                      ✅ Indexed successfully in {data.get('duration_ms', 0) / 1000:.1f}s
-                    </div>""", unsafe_allow_html=True)
+    st.markdown("---")
 
-    # Show ingest stats if available
-    if st.session_state.ingest_stats:
-        d = st.session_state.ingest_stats
-        st.markdown(f"""
-        <div class='metric-row'>
-          <div class='metric-card'>
-            <div class='label'>Files</div>
-            <div class='value'>{d.get('files_indexed', 0)}</div>
-          </div>
-          <div class='metric-card'>
-            <div class='label'>Chunks</div>
-            <div class='value'>{d.get('chunks_stored', 0):,}</div>
-          </div>
-          <div class='metric-card'>
-            <div class='label'>Duration</div>
-            <div class='value'>{d.get('duration_ms', 0) / 1000:.1f}s</div>
-          </div>
-        </div>
-        """, unsafe_allow_html=True)
+    # ── Index settings ──
+    st.markdown('<div class="gr-label">Index Settings</div>', unsafe_allow_html=True)
+    max_files     = st.slider("Max files", 10, 300, 100)
+    branch        = st.text_input("Branch", value="main", placeholder="main")
+    force_reindex = st.checkbox("Force re-index")
 
-        if d.get("warnings"):
-            for w in d["warnings"]:
-                st.markdown(f"""
-                <div style='background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);
-                            border-radius:8px;padding:10px 14px;margin-top:8px;
-                            color:#fcd34d;font-size:13px;'>
-                  ⚠️ {w}
-                </div>""", unsafe_allow_html=True)
-
-        repo_id = d.get("repo_id", "")
-        st.markdown(f"""
-        <div style='margin-top:12px;font-size:12px;color:#484f58;font-family:monospace;'>
-          repo_id: {repo_id}
-        </div>""", unsafe_allow_html=True)
-
-
-# ── RIGHT COLUMN: Ask a question ──────────────────────────────────────────
-with col_right:
-    st.markdown("""
-    <div class='section-header'>
-      <div class='section-number'>2</div>
-      <h3 style='margin:0;font-size:1.1rem;color:#e6edf3;'>Ask a Question</h3>
-    </div>
-    """, unsafe_allow_html=True)
-
-    question = st.text_area(
-        "Your question",
-        placeholder="How does authentication work?\nWhere is the database connection pool configured?\nWhat does the retry decorator do?",
-        height=100,
-        label_visibility="collapsed",
+    st.markdown("---")
+    st.markdown(
+        '<div style="font-size:11px;color:#6e7681;line-height:1.7">'
+        'Pipeline<br>'
+        '<span style="color:#8b949e">GitHub → AST chunks<br>'
+        '→ ChromaDB (HNSW)<br>'
+        '→ BM25 + RRF fusion<br>'
+        '→ Cohere rerank<br>'
+        '→ Groq llama-3.3-70b</span>'
+        '</div>',
+        unsafe_allow_html=True,
     )
 
-    with st.expander("Search options", expanded=False):
-        col_k, col_dummy = st.columns(2)
-        with col_k:
-            k = st.slider("Sources to retrieve (k)", 1, 10, 5,
-                          help="How many code chunks to retrieve before generating the answer")
-        use_hybrid   = st.checkbox("Hybrid search (BM25 + semantic)", value=True,
-                                   help="Combines keyword search with semantic search via RRF fusion")
-        use_reranking = st.checkbox("Cohere reranking", value=True,
-                                    help="Re-scores retrieved chunks with Cohere Rerank v3.5 for higher precision")
 
-    query_btn = st.button("Ask", use_container_width=True, type="primary")
+# ── Main ──────────────────────────────────────────────────────────────────
+# Header
+st.markdown(
+    '<div class="gr-header">'
+    '<div class="gr-logo">◈ Git<span>RAG</span></div>'
+    '<div class="gr-tagline">'
+    'Ask natural-language questions about any public GitHub repository.<br>'
+    'Answers grounded in actual source code — exact file paths &amp; line numbers.'
+    '</div>'
+    '</div>',
+    unsafe_allow_html=True,
+)
 
-    if query_btn:
-        repo_to_query = repo_url_input or st.session_state.repo_url
-        if not question or len(question.strip()) < 3:
-            st.markdown("<div class='alert-error'>❌ Please enter a question (at least 3 characters).</div>",
-                        unsafe_allow_html=True)
-        elif not repo_to_query or "github.com" not in repo_to_query:
-            st.markdown("<div class='alert-error'>❌ Please index a repository first (Step 1).</div>",
-                        unsafe_allow_html=True)
+# ── Step 1 — Repo URL + Index ─────────────────────────────────────────────
+st.markdown('<div class="gr-label">Repository URL</div>', unsafe_allow_html=True)
+
+col_url, col_btn = st.columns([5, 1])
+with col_url:
+    repo_url = st.text_input(
+        "repo_url_main", label_visibility="collapsed",
+        value=st.session_state.repo_url,
+        placeholder="https://github.com/owner/repo",
+    )
+    if repo_url != st.session_state.repo_url:
+        st.session_state.repo_url     = repo_url
+        st.session_state.repo_indexed = False
+        st.session_state.answer       = None
+        st.session_state.sources      = []
+
+with col_btn:
+    st.markdown("<div style='margin-top:4px'></div>", unsafe_allow_html=True)
+    index_clicked = st.button("Index", use_container_width=True)
+
+# Index action
+if index_clicked:
+    repo = st.session_state.repo_url.strip()
+    if not repo.startswith("https://github.com/"):
+        st.markdown(
+            '<div class="gr-err">Enter a valid GitHub URL — <code>https://github.com/owner/repo</code></div>',
+            unsafe_allow_html=True,
+        )
+    elif not st.session_state.health_ok:
+        st.markdown(
+            f'<div class="gr-err">API is offline. Update the endpoint in the sidebar and refresh status.</div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        repo_slug = repo.split("github.com/")[-1]
+        with st.spinner(f"Indexing {repo_slug} …"):
+            data, err = api_call(
+                st.session_state.api_url, "POST", "/ingest",
+                payload={
+                    "repo_url":      repo,
+                    "branch":        branch,
+                    "max_files":     max_files,
+                    "force_reindex": force_reindex,
+                },
+                timeout=300,
+            )
+
+        if data:
+            st.session_state.repo_indexed = True
+            files  = data.get("files_processed", data.get("files_indexed", "?"))
+            chunks = data.get("chunks_indexed",  data.get("chunks_stored",  "?"))
+            cached = data.get("already_indexed", False)
+            msg = (
+                f"Already indexed — using cached index."
+                if cached else
+                f"Indexed <strong>{files} files</strong> · <strong>{chunks} chunks</strong>"
+            )
+            st.markdown(f'<div class="gr-ok">{msg}</div>', unsafe_allow_html=True)
         else:
-            with st.spinner("Searching codebase and generating answer..."):
-                data, err = api_post(f"{api_url}/query", {
-                    "repo_url": repo_to_query,
-                    "question": question.strip(),
-                    "k": k,
-                    "use_hybrid": use_hybrid,
+            st.markdown(f'<div class="gr-err">{err}</div>', unsafe_allow_html=True)
+
+st.markdown("---")
+
+# ── Step 2 — Question ─────────────────────────────────────────────────────
+st.markdown('<div class="gr-label">Question</div>', unsafe_allow_html=True)
+
+question = st.text_area(
+    "question_input", label_visibility="collapsed",
+    placeholder=(
+        "How does authentication work?\n"
+        "Where is JWT token validation?\n"
+        "Explain the database connection pooling strategy…"
+    ),
+    height=96,
+)
+
+ask_clicked = st.button("Ask Question", type="primary")
+
+if ask_clicked:
+    repo = st.session_state.repo_url.strip()
+    q    = (question or "").strip()
+
+    if not repo:
+        st.markdown('<div class="gr-err">Enter a GitHub repository URL first.</div>', unsafe_allow_html=True)
+    elif len(q) < 3:
+        st.markdown('<div class="gr-err">Question must be at least 3 characters.</div>', unsafe_allow_html=True)
+    elif not st.session_state.health_ok:
+        st.markdown('<div class="gr-err">API is offline — check the sidebar.</div>', unsafe_allow_html=True)
+    else:
+        with st.spinner("Searching codebase…"):
+            data, err = api_call(
+                st.session_state.api_url, "POST", "/query",
+                payload={
+                    "repo_url":      repo,
+                    "question":      q,
+                    "k":             k,
+                    "use_hybrid":    use_hybrid,
                     "use_reranking": use_reranking,
-                })
+                },
+                timeout=120,
+            )
 
-            if err:
-                st.markdown(f"<div class='alert-error'>❌ {err}</div>", unsafe_allow_html=True)
-            elif data:
-                st.session_state.last_answer  = data.get("answer", "")
-                st.session_state.last_sources = data.get("sources", [])
-                st.session_state.last_metrics = {
-                    "latency_ms":   data.get("latency_ms", 0),
-                    "tokens_used":  data.get("tokens_used", 0),
-                    "model":        data.get("model", ""),
-                    "k_retrieved":  data.get("k_retrieved", 0),
-                    "pipeline":     data.get("pipeline", "semantic"),
-                }
-
-    # Display answer
-    if st.session_state.last_answer:
-        m = st.session_state.last_metrics
-        pipeline = m.get("pipeline", "semantic")
-
-        # Metrics row
-        p_cls   = pipeline_class(pipeline)
-        p_label = pipeline_label(pipeline)
-        st.markdown(f"""
-        <div class='metric-row'>
-          <div class='metric-card'>
-            <div class='label'>Latency</div>
-            <div class='value'>{m.get('latency_ms', 0):.0f} ms</div>
-          </div>
-          <div class='metric-card'>
-            <div class='label'>Tokens</div>
-            <div class='value'>{m.get('tokens_used', 0):,}</div>
-          </div>
-          <div class='metric-card'>
-            <div class='label'>Sources</div>
-            <div class='value'>{m.get('k_retrieved', 0)}</div>
-          </div>
-          <div class='metric-card' style='border-color:rgba(37,99,235,0.25);'>
-            <div class='label'>Pipeline</div>
-            <div style='margin-top:6px;'>
-              <span class='pipeline-badge {p_cls}'>{p_label}</span>
-            </div>
-          </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        # Answer
-        import html
-        answer_html = html.escape(st.session_state.last_answer).replace("\n", "<br/>")
-        st.markdown(f"<div class='answer-box'>{answer_html}</div>", unsafe_allow_html=True)
-
-        # Sources
-        if st.session_state.last_sources:
-            st.markdown(f"""
-            <div style='margin-top:24px;margin-bottom:12px;'>
-              <span style='color:#8b949e;font-size:13px;font-weight:600;
-                           text-transform:uppercase;letter-spacing:0.08em;'>
-                Sources ({len(st.session_state.last_sources)})
-              </span>
-            </div>
-            """, unsafe_allow_html=True)
-
-            for src in st.session_state.last_sources:
-                score      = src.get("rerank_score") or src.get("similarity_score", 0)
-                score_pct  = f"{score * 100:.1f}%"
-                s_cls      = score_class(score)
-                lang       = src.get("language", "")
-                start_line = src.get("start_line", "?")
-                end_line   = src.get("end_line", "?")
-                excerpt    = html.escape(src.get("excerpt", "")[:180])
-
-                score_label = "rerank" if src.get("rerank_score") else "similarity"
-
-                st.markdown(f"""
-                <div class='source-card'>
-                  <div style='display:flex;justify-content:space-between;align-items:flex-start;'>
-                    <div>
-                      <div class='file-path'>{html.escape(src.get('file_path', ''))}</div>
-                      <div class='lines'>Lines {start_line}–{end_line} · {lang}</div>
-                    </div>
-                    <span class='score-badge {s_cls}'>{score_label} {score_pct}</span>
-                  </div>
-                  <div class='excerpt'>{excerpt}</div>
-                </div>
-                """, unsafe_allow_html=True)
+        if data:
+            st.session_state.answer  = data.get("answer", "")
+            st.session_state.sources = data.get("sources", [])
+            st.session_state.metrics = {
+                "latency_ms":  data.get("latency_ms", 0),
+                "tokens_used": data.get("tokens_used", 0),
+                "k_retrieved": data.get("k_retrieved", 0),
+                "pipeline":    data.get("pipeline", "semantic"),
+            }
+        elif err == "REPO_NOT_INDEXED":
+            st.markdown(
+                '<div class="gr-err">Repository not indexed yet — click <strong>Index</strong> first.</div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(f'<div class="gr-err">{err}</div>', unsafe_allow_html=True)
 
 
-# ── Empty state when nothing indexed yet ──────────────────────────────────
-if not st.session_state.repo_url and not st.session_state.last_answer:
+# ── Results ───────────────────────────────────────────────────────────────
+if st.session_state.answer:
+    m = st.session_state.metrics
+    pipeline = m.get("pipeline", "semantic")
+
+    # Metrics row
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Latency",  f"{m.get('latency_ms', 0):.0f} ms")
+    c2.metric("Tokens",   m.get("tokens_used", 0))
+    c3.metric("Sources",  m.get("k_retrieved", 0))
+    c4.metric("Pipeline", pipeline)
+
     st.markdown("---")
-    st.markdown("""
-    <div style='text-align:center;padding:48px 24px;'>
-      <div style='font-size:48px;margin-bottom:16px;'>⚡</div>
-      <h3 style='color:#e6edf3;margin-bottom:8px;'>Get started</h3>
-      <p style='color:#6b7280;max-width:440px;margin:0 auto;font-size:14px;line-height:1.7;'>
-        Paste any public GitHub repo URL in Step 1, click <strong style='color:#c9d1d9;'>Index Repository</strong>,
-        then ask a question in Step 2.<br/><br/>
-        GitRAG will search the codebase semantically and return answers
-        with exact file paths and line numbers.
-      </p>
-      <div style='margin-top:24px;display:flex;justify-content:center;gap:12px;flex-wrap:wrap;'>
-        <code style='background:#161b22;border:1px solid #21262d;border-radius:6px;
-                     padding:6px 12px;font-size:12px;color:#8b949e;'>
-          github.com/tiangolo/fastapi
-        </code>
-        <code style='background:#161b22;border:1px solid #21262d;border-radius:6px;
-                     padding:6px 12px;font-size:12px;color:#8b949e;'>
-          github.com/pallets/flask
-        </code>
-        <code style='background:#161b22;border:1px solid #21262d;border-radius:6px;
-                     padding:6px 12px;font-size:12px;color:#8b949e;'>
-          github.com/django/django
-        </code>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
+
+    # Answer
+    st.markdown('<div class="gr-label">Answer</div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="gr-answer">{st.session_state.answer}</div>',
+        unsafe_allow_html=True,
+    )
+
+    # Sources
+    sources = st.session_state.sources
+    if sources:
+        st.markdown(
+            f'<div class="gr-label" style="margin-top:20px">Sources &nbsp;'
+            f'<span style="color:#8b949e;font-weight:400;text-transform:none;letter-spacing:0;font-size:12px">({len(sources)} chunks)</span>'
+            f'&nbsp;{pipeline_badge(pipeline)}</div>',
+            unsafe_allow_html=True,
+        )
+
+        for src in sources:
+            path       = src.get("file_path", "unknown")
+            start      = src.get("start_line")
+            end        = src.get("end_line")
+            lang       = src.get("language", "")
+            rerank_sc  = src.get("rerank_score")
+            sim_sc     = src.get("similarity_score", 0.0)
+            excerpt    = (src.get("excerpt") or "").strip()
+
+            disp_score  = rerank_sc if rerank_sc is not None else sim_sc
+            score_label = "rerank" if rerank_sc is not None else "sim"
+            lines_str   = f"L{start}–{end}" if start and end else ""
+            sc          = score_cls(disp_score)
+
+            lang_badge = f'<span class="b b-gray">{lang}</span>' if lang else ""
+            line_span  = f'<span style="color:var(--text-3);font-size:11px">{lines_str}</span>' if lines_str else ""
+            score_span = (
+                f'<span class="{sc}" style="font-size:11px;font-weight:600;margin-left:auto">'
+                f'{score_label} {disp_score:.3f}</span>'
+            )
+
+            st.markdown(
+                f'<div class="gr-source">'
+                f'  <div class="gr-path">{path}</div>'
+                f'  <div class="gr-meta">{lang_badge}{line_span}{score_span}</div>'
+                f'  <div class="gr-excerpt">{excerpt}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+else:
+    # ── Empty state ──
+    st.markdown(
+        '<div class="gr-empty">'
+        '  <div class="gr-empty-icon">⟨/⟩</div>'
+        '  <div class="gr-empty-title">Ready to search your codebase</div>'
+        '  <div class="gr-empty-desc">'
+        '    Paste a GitHub repo URL above, click Index, then ask any question about the code.'
+        '  </div>'
+        '  <div class="gr-chips">'
+        '    <span class="gr-chip">tiangolo/fastapi</span>'
+        '    <span class="gr-chip">pallets/flask</span>'
+        '    <span class="gr-chip">django/django</span>'
+        '    <span class="gr-chip">yanou16/Git_RAG</span>'
+        '  </div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
