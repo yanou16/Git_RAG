@@ -14,7 +14,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.13"
           cache: "pip"
 
       - name: Install dependencies
@@ -31,9 +31,10 @@ jobs:
         env:
           ANIMUSAI_API_KEY: "test_key"
           GROQ_API_KEY: "test_key"
+          COHERE_API_KEY: "test_key"
           CHROMA_PERSIST_DIR: "/tmp/chroma_test"
         run: |
-          pytest tests/ -v --cov=app --cov-report=term-missing
+          pytest tests/ -v --cov=app --cov-report=term-missing --cov-fail-under=70
 
   docker:
     runs-on: ubuntu-latest
