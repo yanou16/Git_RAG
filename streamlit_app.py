@@ -235,17 +235,27 @@ def api_call(base: str, method: str, endpoint: str, payload: dict = None, timeou
     except requests.exceptions.Timeout:
         return None, "Request timed out. The repo may be large — try again."
     except requests.exceptions.HTTPError as e:
+        status = e.response.status_code
+        # Try to extract the real error message from the response body
+        raw = e.response.text or ""
         try:
-            detail = e.response.json().get("detail", str(e))
+            body = e.response.json()
+            detail = body.get("detail", body)
             if isinstance(detail, dict):
                 code = detail.get("code", "")
                 msg  = detail.get("detail", str(detail))
                 if code == "REPO_NOT_INDEXED":
                     return None, "REPO_NOT_INDEXED"
-                return None, msg
+                return None, f"[{status}] {msg}"
+            if isinstance(detail, str):
+                if "REPO_NOT_INDEXED" in detail:
+                    return None, "REPO_NOT_INDEXED"
+                return None, f"[{status}] {detail}"
+            return None, f"[{status}] {detail}"
         except Exception:
-            pass
-        return None, f"HTTP {e.response.status_code}: {e}"
+            # Raw response (e.g. HTML 502 from HF proxy)
+            snippet = raw[:300].strip() if raw else "No response body"
+            return None, f"[{status}] {snippet}"
     except Exception as e:
         return None, str(e)
 
