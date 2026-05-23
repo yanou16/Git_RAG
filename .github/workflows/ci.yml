@@ -50,7 +50,9 @@ jobs:
           docker run -d --name gitrag_test \
             -e ANIMUSAI_API_KEY=test \
             -e GROQ_API_KEY=test \
+            -e COHERE_API_KEY=test \
+            -e PORT=8000 \
             -p 8000:8000 gitrag:latest
-          sleep 10
-          curl -f http://localhost:8000/health || exit 1
+          sleep 15
+          curl -f http://localhost:8000/health || (docker logs gitrag_test && exit 1)
           docker stop gitrag_test
