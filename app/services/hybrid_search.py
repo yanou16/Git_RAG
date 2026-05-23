@@ -1,4 +1,3 @@
-import math
 import structlog
 from rank_bm25 import BM25Okapi
 

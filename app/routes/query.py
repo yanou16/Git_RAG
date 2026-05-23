@@ -1,6 +1,7 @@
 import time
 import structlog
 from fastapi import APIRouter, HTTPException
+from app.config import get_settings
 from app.models.schemas import QueryRequest, QueryResponse, Source
 from app.services.embedder import EmbedderService
 from app.services.vector_store import VectorStore
@@ -9,6 +10,8 @@ from app.services.reranker import RerankerService
 from app.services.hybrid_search import bm25_search, reciprocal_rank_fusion
 from app.utils.hashing import url_to_repo_id
 from app.routes.health import _metrics
+
+settings = get_settings()
 
 router = APIRouter()
 log = structlog.get_logger()
@@ -132,7 +135,3 @@ async def query_repo(request: QueryRequest):
         pipeline=pipeline,
     )
 
-
-# Avoid circular import — import settings here after log is defined
-from app.config import get_settings
-settings = get_settings()
