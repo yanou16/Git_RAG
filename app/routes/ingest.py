@@ -39,21 +39,19 @@ async def ingest_repo(request: IngestRequest):
             files_indexed=0,
             chunks_stored=0,
             duration_ms=round((time.time() - start_time) * 1000, 2),
-            was_cached=True
+            was_cached=True,
         )
 
     try:
         files = await github.list_files(
-            owner, repo,
-            branch=request.branch,
-            extensions=request.file_extensions
+            owner, repo, branch=request.branch, extensions=request.file_extensions
         )
 
         if len(files) > request.max_files:
             warnings.append(
                 f"Repo has {len(files)} files. Only indexing first {request.max_files}."
             )
-            files = files[:request.max_files]
+            files = files[: request.max_files]
 
         if not files:
             raise HTTPException(404, "No supported files found in repository")
@@ -64,9 +62,11 @@ async def ingest_repo(request: IngestRequest):
         async def process_file(file_info: dict) -> list:
             async with semaphore:
                 if file_info.get("size", 0) > settings.GITHUB_MAX_FILE_SIZE_KB * 1024:
-                    log.info("file_skipped_too_large",
-                             path=file_info["path"],
-                             size_kb=file_info["size"] // 1024)
+                    log.info(
+                        "file_skipped_too_large",
+                        path=file_info["path"],
+                        size_kb=file_info["size"] // 1024,
+                    )
                     return []
 
                 content = await github.get_file_content(owner, repo, file_info["path"])
@@ -85,7 +85,9 @@ async def ingest_repo(request: IngestRequest):
                 log.warning("file_processing_error", error=str(result))
 
         if not all_chunks:
-            raise HTTPException(422, "No content could be extracted from repository files")
+            raise HTTPException(
+                422, "No content could be extracted from repository files"
+            )
 
         texts = [c.text for c in all_chunks]
         embeddings = await embedder.embed_texts(texts)
@@ -93,11 +95,13 @@ async def ingest_repo(request: IngestRequest):
         stored = vector_store.upsert_chunks(repo_id, all_chunks, embeddings)
 
         duration_ms = round((time.time() - start_time) * 1000, 2)
-        log.info("ingest_completed",
-                 repo_id=repo_id,
-                 files_indexed=len(files),
-                 chunks_stored=stored,
-                 duration_ms=duration_ms)
+        log.info(
+            "ingest_completed",
+            repo_id=repo_id,
+            files_indexed=len(files),
+            chunks_stored=stored,
+            duration_ms=duration_ms,
+        )
 
         return IngestResponse(
             repo_id=repo_id,
@@ -106,15 +110,18 @@ async def ingest_repo(request: IngestRequest):
             chunks_stored=stored,
             duration_ms=duration_ms,
             was_cached=False,
-            warnings=warnings
+            warnings=warnings,
         )
 
     except RepoNotFoundError as e:
-        raise HTTPException(status_code=404, detail={
-            "error": "Repo not found",
-            "detail": str(e),
-            "code": "REPO_NOT_FOUND"
-        })
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "Repo not found",
+                "detail": str(e),
+                "code": "REPO_NOT_FOUND",
+            },
+        )
     finally:
         await github.close()
 

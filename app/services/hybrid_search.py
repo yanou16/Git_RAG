@@ -7,6 +7,7 @@ log = structlog.get_logger()
 def tokenize(text: str) -> list[str]:
     """Lowercase + split on non-alphanumeric chars."""
     import re
+
     return re.findall(r"[a-zA-Z0-9_]+", text.lower())
 
 

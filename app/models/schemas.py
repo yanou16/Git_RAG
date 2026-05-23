@@ -16,21 +16,21 @@ class Language(str, Enum):
 
 # ─── INGEST ────────────────────────────────────────────────
 
+
 class IngestRequest(BaseModel):
     repo_url: str = Field(
         ...,
         description="GitHub repo URL public",
-        examples=["https://github.com/tiangolo/fastapi"]
+        examples=["https://github.com/tiangolo/fastapi"],
     )
     branch: str = Field(default="main", description="Branch à indexer")
     file_extensions: list[str] = Field(
         default=[".py", ".ts", ".js", ".tsx", ".go", ".rs", ".md", ".yaml"],
-        description="Extensions de fichiers à indexer"
+        description="Extensions de fichiers à indexer",
     )
     max_files: int = Field(default=200, ge=1, le=500)
     force_reindex: bool = Field(
-        default=False,
-        description="Forcer la ré-indexation même si déjà fait"
+        default=False, description="Forcer la ré-indexation même si déjà fait"
     )
 
     @field_validator("repo_url")
@@ -53,13 +53,16 @@ class IngestResponse(BaseModel):
 
 # ─── QUERY ─────────────────────────────────────────────────
 
+
 class QueryRequest(BaseModel):
     repo_url: str
     question: str = Field(..., min_length=3, max_length=500)
     k: int = Field(default=5, ge=1, le=20, description="Final chunks envoyés au LLM")
     temperature: float = Field(default=0.1, ge=0.0, le=1.0)
     language: Optional[str] = Field(default=None, description="Filtrer sur un langage")
-    use_reranking: bool = Field(default=True, description="Cohere reranking (si clé dispo)")
+    use_reranking: bool = Field(
+        default=True, description="Cohere reranking (si clé dispo)"
+    )
     use_hybrid: bool = Field(default=True, description="BM25 + semantic hybrid search")
 
 
@@ -88,6 +91,7 @@ class QueryResponse(BaseModel):
 
 # ─── HEALTH ────────────────────────────────────────────────
 
+
 class HealthResponse(BaseModel):
     status: str  # "healthy" | "degraded" | "unhealthy"
     version: str
@@ -106,6 +110,7 @@ class MetricsResponse(BaseModel):
 
 
 # ─── ERRORS ────────────────────────────────────────────────
+
 
 class ErrorResponse(BaseModel):
     error: str

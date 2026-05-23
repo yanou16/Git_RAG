@@ -35,11 +35,7 @@ class GitHubService:
 
     @with_retry(max_retries=3)
     async def list_files(
-        self,
-        owner: str,
-        repo: str,
-        branch: str = "main",
-        extensions: list[str] = None
+        self, owner: str, repo: str, branch: str = "main", extensions: list[str] = None
     ) -> list[dict]:
         extensions = extensions or list(SUPPORTED_EXTENSIONS.keys())
 
@@ -63,21 +59,21 @@ class GitHubService:
             ext = "." + path.rsplit(".", 1)[-1] if "." in path else ""
             if ext not in extensions:
                 continue
-            files.append({
-                "path": path,
-                "size": item.get("size", 0),
-                "sha": item["sha"],
-                "language": SUPPORTED_EXTENSIONS.get(ext, "other")
-            })
+            files.append(
+                {
+                    "path": path,
+                    "size": item.get("size", 0),
+                    "sha": item["sha"],
+                    "language": SUPPORTED_EXTENSIONS.get(ext, "other"),
+                }
+            )
 
         log.info("github_files_listed", owner=owner, repo=repo, total_files=len(files))
         return files
 
     @with_retry(max_retries=3)
     async def get_file_content(self, owner: str, repo: str, path: str) -> str | None:
-        response = await self.client.get(
-            f"/repos/{owner}/{repo}/contents/{path}"
-        )
+        response = await self.client.get(f"/repos/{owner}/{repo}/contents/{path}")
         if response.status_code == 404:
             return None
         response.raise_for_status()

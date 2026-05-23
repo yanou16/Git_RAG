@@ -12,7 +12,7 @@ class VectorStore:
     def __init__(self):
         self.client = chromadb.PersistentClient(
             path=settings.CHROMA_PERSIST_DIR,
-            settings=ChromaSettings(anonymized_telemetry=False)
+            settings=ChromaSettings(anonymized_telemetry=False),
         )
 
     def _collection_name(self, repo_id: str) -> str:
@@ -28,15 +28,11 @@ class VectorStore:
 
     def get_or_create_collection(self, repo_id: str):
         return self.client.get_or_create_collection(
-            name=self._collection_name(repo_id),
-            metadata={"hnsw:space": "cosine"}
+            name=self._collection_name(repo_id), metadata={"hnsw:space": "cosine"}
         )
 
     def upsert_chunks(
-        self,
-        repo_id: str,
-        chunks: list[Chunk],
-        embeddings: list[list[float]]
+        self, repo_id: str, chunks: list[Chunk], embeddings: list[list[float]]
     ) -> int:
         if not chunks:
             return 0
@@ -52,16 +48,13 @@ class VectorStore:
                 "start_line": c.start_line,
                 "end_line": c.end_line,
                 "chunk_type": c.chunk_type,
-                "repo_id": repo_id
+                "repo_id": repo_id,
             }
             for c in chunks
         ]
 
         collection.upsert(
-            ids=ids,
-            documents=documents,
-            embeddings=embeddings,
-            metadatas=metadatas
+            ids=ids, documents=documents, embeddings=embeddings, metadatas=metadatas
         )
 
         log.info("chunks_stored", repo_id=repo_id, count=len(chunks))
@@ -72,7 +65,7 @@ class VectorStore:
         repo_id: str,
         query_embedding: list[float],
         k: int = 5,
-        language_filter: str = None
+        language_filter: str = None,
     ) -> list[dict]:
         collection = self.get_or_create_collection(repo_id)
 
@@ -84,7 +77,7 @@ class VectorStore:
             query_embeddings=[query_embedding],
             n_results=min(k, collection.count()),
             where=where,
-            include=["documents", "metadatas", "distances"]
+            include=["documents", "metadatas", "distances"],
         )
 
         if not results["ids"][0]:
@@ -92,11 +85,13 @@ class VectorStore:
 
         chunks = []
         for i, _ in enumerate(results["ids"][0]):
-            chunks.append({
-                "text": results["documents"][0][i],
-                "metadata": results["metadatas"][0][i],
-                "score": 1 - results["distances"][0][i]
-            })
+            chunks.append(
+                {
+                    "text": results["documents"][0][i],
+                    "metadata": results["metadatas"][0][i],
+                    "score": 1 - results["distances"][0][i],
+                }
+            )
 
         return chunks
 
@@ -113,5 +108,5 @@ class VectorStore:
         return {
             "indexed_repos": len(collections),
             "total_chunks": total_chunks,
-            "collections": [c.name for c in collections]
+            "collections": [c.name for c in collections],
         }

@@ -11,11 +11,7 @@ settings = get_settings()
 START_TIME = time.time()
 
 # In-memory counters (replace with Redis in a real multi-worker setup)
-_metrics = {
-    "total_queries": 0,
-    "total_latency_ms": 0.0,
-    "errors_last_hour": 0
-}
+_metrics = {"total_queries": 0, "total_latency_ms": 0.0, "errors_last_hour": 0}
 
 
 @router.get("/health", response_model=HealthResponse)
@@ -36,7 +32,7 @@ async def health_check():
         version=settings.VERSION,
         uptime_seconds=round(time.time() - START_TIME, 2),
         chroma_status=chroma_status,
-        groq_status=groq_status
+        groq_status=groq_status,
     )
 
 
@@ -47,7 +43,8 @@ async def get_metrics():
 
     avg_latency = (
         _metrics["total_latency_ms"] / _metrics["total_queries"]
-        if _metrics["total_queries"] > 0 else 0.0
+        if _metrics["total_queries"] > 0
+        else 0.0
     )
 
     return MetricsResponse(
@@ -56,5 +53,5 @@ async def get_metrics():
         total_queries=_metrics["total_queries"],
         avg_query_latency_ms=round(avg_latency, 2),
         uptime_seconds=round(time.time() - START_TIME, 2),
-        errors_last_hour=_metrics["errors_last_hour"]
+        errors_last_hour=_metrics["errors_last_hour"],
     )

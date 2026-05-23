@@ -134,4 +134,3 @@ async def query_repo(request: QueryRequest):
         k_retrieved=len(chunks),
         pipeline=pipeline,
     )
-
