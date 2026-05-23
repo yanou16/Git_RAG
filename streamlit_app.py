@@ -32,7 +32,7 @@ st.set_page_config(
 # ── MD3 CSS ───────────────────────────────────────────────────────────────
 CSS = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,700&family=JetBrains+Mono:wght@400;500&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 /* ── MD3 Dark Color Scheme — seed: Google Blue #1A73E8 ── */
 :root {
@@ -392,10 +392,9 @@ hr {
   color: var(--md-on-primary-container);
 }
 .m3-banner-icon {
-  font-family: 'Material Symbols Outlined';
-  font-size: 20px;
+  font-size: 16px;
   flex-shrink: 0;
-  font-variation-settings: 'FILL' 1, 'wght' 400;
+  line-height: 20px;
 }
 
 /* Answer — MD3 Elevated card (surface-container + shadow) */
@@ -524,13 +523,12 @@ hr {
   padding: 64px 24px;
 }
 .m3-empty-icon {
-  font-family: 'Material Symbols Outlined';
-  font-size: 72px;
+  font-size: 64px;
   color: var(--md-on-surface-variant);
-  opacity: 0.4;
+  opacity: 0.5;
   margin-bottom: 20px;
   display: block;
-  font-variation-settings: 'FILL' 0, 'wght' 200, 'GRAD' -25;
+  line-height: 1;
 }
 .m3-empty-headline {
   font-family: var(--font-brand);
@@ -802,12 +800,12 @@ if index_clicked:
     repo = st.session_state.repo_url.strip()
     if not repo.startswith("https://github.com/"):
         st.markdown(
-            banner("error", "error", "Enter a valid GitHub URL — <code>https://github.com/owner/repo</code>"),
+            banner("error", "✗", "Enter a valid GitHub URL — <code>https://github.com/owner/repo</code>"),
             unsafe_allow_html=True,
         )
     elif not st.session_state.health_ok:
         st.markdown(
-            banner("error", "wifi_off", "API is offline. Update the endpoint in the sidebar and refresh status."),
+            banner("error", "🔌", "API is offline. Update the endpoint in the sidebar and refresh status."),
             unsafe_allow_html=True,
         )
     else:
@@ -834,9 +832,9 @@ if index_clicked:
                 if cached else
                 f"Indexed <strong>{files} files</strong> · <strong>{chunks} chunks</strong>"
             )
-            st.markdown(banner("success", "check_circle", msg), unsafe_allow_html=True)
+            st.markdown(banner("success", "✓", msg), unsafe_allow_html=True)
         else:
-            st.markdown(banner("error", "error", err), unsafe_allow_html=True)
+            st.markdown(banner("error", "✗", err), unsafe_allow_html=True)
 
 st.markdown("---")
 
@@ -860,11 +858,11 @@ if ask_clicked:
     q    = (question or "").strip()
 
     if not repo:
-        st.markdown(banner("error", "error", "Enter a GitHub repository URL first."), unsafe_allow_html=True)
+        st.markdown(banner("error", "✗", "Enter a GitHub repository URL first."), unsafe_allow_html=True)
     elif len(q) < 3:
-        st.markdown(banner("error", "error", "Question must be at least 3 characters."), unsafe_allow_html=True)
+        st.markdown(banner("error", "✗", "Question must be at least 3 characters."), unsafe_allow_html=True)
     elif not st.session_state.health_ok:
-        st.markdown(banner("error", "wifi_off", "API is offline — check the sidebar."), unsafe_allow_html=True)
+        st.markdown(banner("error", "🔌", "API is offline — check the sidebar."), unsafe_allow_html=True)
     else:
         with st.spinner("Searching codebase…"):
             data, err = api_call(
@@ -890,11 +888,11 @@ if ask_clicked:
             }
         elif err == "REPO_NOT_INDEXED":
             st.markdown(
-                banner("error", "database", "Repository not indexed yet — click <strong>Index</strong> first."),
+                banner("error", "🗄️", "Repository not indexed yet — click <strong>Index</strong> first."),
                 unsafe_allow_html=True,
             )
         else:
-            st.markdown(banner("error", "error", err), unsafe_allow_html=True)
+            st.markdown(banner("error", "✗", err), unsafe_allow_html=True)
 
 
 # ── Results ───────────────────────────────────────────────────────────────
@@ -967,7 +965,7 @@ else:
     # Empty state
     st.markdown(
         '<div class="m3-empty">'
-        '  <span class="m3-empty-icon">code</span>'
+        '  <span class="m3-empty-icon">⬡</span>'
         '  <div class="m3-empty-headline">Ready to search your codebase</div>'
         '  <div class="m3-empty-body">'
         '    Paste a GitHub repo URL above, click Index, then ask any question about the code.'
