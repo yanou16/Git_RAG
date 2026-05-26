@@ -1,12 +1,3 @@
-##. System Architecture
-
-<img width="829" height="552" alt="image" src="https://github.com/user-attachments/assets/e7ae94b1-d71f-4fe3-879b-44ef9d96fd34" />
-
-##.  RAG Pipeline (detailed)
-
-<img width="613" height="551" alt="image" src="https://github.com/user-attachments/assets/7dad1a8d-1c6e-4f9a-8e99-72e706f40ec5" />
-
-
 ---
 title: GitRAG API
 emoji: 🔍
@@ -27,6 +18,16 @@ app_port: 7860
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 **Live demo:** [gitrag.vercel.app](https://git-rag.vercel.app/#) &nbsp;·&nbsp; **API:** [yanou16-gitgub-rag.hf.space](https://yanou16-gitgub-rag.hf.space/docs)
+
+---
+
+## Architecture
+
+### System overview
+<img width="829" height="552" alt="System architecture" src="https://github.com/user-attachments/assets/e7ae94b1-d71f-4fe3-879b-44ef9d96fd34" />
+
+### RAG pipeline
+<img width="613" height="551" alt="RAG pipeline" src="https://github.com/user-attachments/assets/7dad1a8d-1c6e-4f9a-8e99-72e706f40ec5" />
 
 ---
 
