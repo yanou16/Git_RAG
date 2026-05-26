@@ -26,7 +26,7 @@ app_port: 7860
 [![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**Live demo:** [gitrag.vercel.app](https://gitrag.vercel.app) &nbsp;·&nbsp; **API:** [yanou16-gitgub-rag.hf.space](https://yanou16-gitgub-rag.hf.space/docs)
+**Live demo:** [gitrag.vercel.app](https://git-rag.vercel.app/#) &nbsp;·&nbsp; **API:** [yanou16-gitgub-rag.hf.space](https://yanou16-gitgub-rag.hf.space/docs)
 
 ---
 
