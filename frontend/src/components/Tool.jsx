@@ -138,7 +138,7 @@ export default function Tool() {
   const isQuerying  = step === "querying";
 
   return (
-    <section id="tool" className="bg-c-canvas py-24 px-8" aria-label="Interactive demo">
+    <section id="tool" className="bg-c-canvas py-16 sm:py-24 px-4 sm:px-8" aria-label="Interactive demo">
       <div className="max-w-3xl mx-auto">
         <p className="font-mono text-xs text-c-muted tracking-mono uppercase mb-6">Live demo</p>
         <h2
@@ -179,7 +179,7 @@ export default function Tool() {
 
           {!repoReady ? (
             <>
-              <div className="flex gap-2 mb-3">
+              <div className="flex flex-col sm:flex-row gap-2 mb-3">
                 <Input
                   id="repo-url" type="url"
                   value={repoUrl} onChange={e => setRepoUrl(e.target.value)}
@@ -190,7 +190,7 @@ export default function Tool() {
                 <Button
                   onClick={handleIngest}
                   disabled={isIngesting || !repoUrl.trim()}
-                  className="shrink-0"
+                  className="shrink-0 sm:w-auto w-full"
                 >
                   {isIngesting
                     ? <><Loader2 size={13} className="spin" aria-hidden="true" /> Indexing…</>
@@ -240,7 +240,7 @@ export default function Tool() {
             </h3>
           </div>
 
-          <div className="flex gap-2 mb-3">
+          <div className="flex flex-col sm:flex-row gap-2 mb-3">
             <Input
               id="question" type="text"
               value={question} onChange={e => setQuestion(e.target.value)}
@@ -251,7 +251,7 @@ export default function Tool() {
             <Button
               onClick={handleQuery}
               disabled={!repoReady || isQuerying || !question.trim()}
-              className="shrink-0"
+              className="shrink-0 sm:w-auto w-full"
             >
               {isQuerying
                 ? <><Loader2 size={13} className="spin" aria-hidden="true" /> Asking…</>

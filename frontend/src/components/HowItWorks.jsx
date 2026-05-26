@@ -15,13 +15,13 @@ const STEPS = [
     num: "03",
     title: "Cohere reranking",
     desc: "A cross-encoder model rescores the top 20 candidates so only the most relevant code chunks reach the LLM, cutting noise by 4x.",
-    tag: "Top 20 to 5",
+    tag: "Top 20 → 5",
   },
   {
     num: "04",
     title: "Grounded answer",
     desc: "Groq's llama-3.3-70b generates a precise answer grounded in the actual code, with file paths and line numbers you can verify.",
-    tag: "Groq llama-3.3-70b",
+    tag: "llama-3.3-70b",
   },
 ];
 
@@ -44,43 +44,48 @@ export default function HowItWorks() {
   return (
     <>
       {/* ── Pipeline rows ── */}
-      <section
-        id="how-it-works"
-        className="bg-c-canvas py-24 px-8"
-        aria-label="How it works"
-      >
+      <section id="how-it-works" className="bg-c-canvas py-16 sm:py-24 px-4 sm:px-8" aria-label="How it works">
         <div className="max-w-5xl mx-auto">
           <p className="font-mono text-xs text-c-muted tracking-mono uppercase mb-6">
             The pipeline
           </p>
           <h2
-            className="font-display font-light text-c-ink leading-snug tracking-display mb-16"
-            style={{ fontSize: "clamp(36px, 5vw, 60px)", letterSpacing: "-0.015em" }}
+            className="font-display font-light text-c-ink leading-snug mb-12 sm:mb-16"
+            style={{ fontSize: "clamp(28px, 5vw, 60px)", letterSpacing: "-0.015em" }}
           >
             Four stages, zero hallucination.
           </h2>
 
-          {/* Rule-separated rows */}
           <div className="border-t border-c-hairline">
             {STEPS.map((step) => (
-              <div
-                key={step.num}
-                className="border-b border-c-hairline py-8 grid gap-4"
-                style={{ gridTemplateColumns: "56px 1fr auto" }}
-              >
-                <span className="font-mono text-sm text-c-muted pt-0.5">{step.num}</span>
-                <div>
-                  <h3 className="font-display font-normal text-xl text-c-ink leading-snug mb-2"
-                      style={{ letterSpacing: "-0.01em" }}>
-                    {step.title}
-                  </h3>
-                  <p className="text-base text-c-body-muted leading-[1.5] max-w-xl">
-                    {step.desc}
-                  </p>
+              <div key={step.num} className="border-b border-c-hairline py-6 sm:py-8">
+                {/* Mobile: stacked. Desktop: 3-col grid */}
+                <div className="flex items-start gap-4 sm:grid sm:gap-4" style={{ gridTemplateColumns: "56px 1fr auto" }}>
+                  <span className="font-mono text-sm text-c-muted pt-0.5 shrink-0 w-10 sm:w-auto">
+                    {step.num}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 mb-2 flex-wrap">
+                      <h3
+                        className="font-display font-normal text-lg sm:text-xl text-c-ink leading-snug"
+                        style={{ letterSpacing: "-0.01em" }}
+                      >
+                        {step.title}
+                      </h3>
+                      {/* Tag inline on mobile, separate col on desktop */}
+                      <span className="sm:hidden font-mono text-[10px] text-c-muted tracking-mono uppercase border border-c-hairline px-2 py-0.5 rounded">
+                        {step.tag}
+                      </span>
+                    </div>
+                    <p className="text-sm sm:text-base text-c-body-muted leading-[1.5]">
+                      {step.desc}
+                    </p>
+                  </div>
+                  {/* Tag separate col — desktop only */}
+                  <span className="hidden sm:block font-mono text-xs text-c-muted tracking-mono uppercase self-center whitespace-nowrap">
+                    {step.tag}
+                  </span>
                 </div>
-                <span className="font-mono text-xs text-c-muted tracking-mono uppercase self-center whitespace-nowrap">
-                  {step.tag}
-                </span>
               </div>
             ))}
           </div>
@@ -88,23 +93,25 @@ export default function HowItWorks() {
       </section>
 
       {/* ── Dark feature band ── */}
-      <section
-        className="bg-c-green py-24 px-8"
-        aria-label="Capabilities"
-      >
+      <section className="bg-c-green py-16 sm:py-24 px-4 sm:px-8" aria-label="Capabilities">
         <div className="max-w-5xl mx-auto">
           <h2
-            className="font-display font-light text-white leading-none mb-16"
-            style={{ fontSize: "clamp(36px, 5vw, 60px)", letterSpacing: "-0.015em" }}
+            className="font-display font-light text-white leading-tight mb-12 sm:mb-16"
+            style={{ fontSize: "clamp(28px, 5vw, 60px)", letterSpacing: "-0.015em" }}
           >
             Built for code.<br />Trained on intent.
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-0 border-t border-white/20">
             {FEATURES.map((f) => (
-              <div key={f.title} className="border-b md:border-b-0 md:border-r border-white/20 pt-8 pr-8 pb-8 last:border-r-0">
-                <h3 className="font-display font-normal text-white text-xl mb-3"
-                    style={{ letterSpacing: "-0.01em" }}>
+              <div
+                key={f.title}
+                className="border-b md:border-b-0 md:border-r border-white/20 pt-8 pb-8 md:pr-8 last:border-r-0 last:border-b-0"
+              >
+                <h3
+                  className="font-display font-normal text-white text-xl mb-3"
+                  style={{ letterSpacing: "-0.01em" }}
+                >
                   {f.title}
                 </h3>
                 <p className="text-[15px] text-white/55 leading-[1.5]">{f.desc}</p>
