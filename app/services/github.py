@@ -8,16 +8,56 @@ log = structlog.get_logger()
 settings = get_settings()
 
 SUPPORTED_EXTENSIONS = {
+    # Python
     ".py": "python",
+    # JavaScript / TypeScript
     ".ts": "typescript",
     ".tsx": "typescript",
     ".js": "javascript",
     ".jsx": "javascript",
+    ".vue": "javascript",
+    ".svelte": "javascript",
+    # C#
+    ".cs": "csharp",
+    # Java
+    ".java": "java",
+    # C / C++
+    ".c": "c",
+    ".h": "c",
+    ".cpp": "cpp",
+    ".cc": "cpp",
+    ".cxx": "cpp",
+    ".hpp": "cpp",
+    # Go
     ".go": "go",
+    # Rust
     ".rs": "rust",
+    # Ruby
+    ".rb": "ruby",
+    # PHP
+    ".php": "php",
+    # Swift
+    ".swift": "swift",
+    # Kotlin
+    ".kt": "kotlin",
+    ".kts": "kotlin",
+    # Dart / Flutter
+    ".dart": "dart",
+    # Shell
+    ".sh": "shell",
+    ".bash": "shell",
+    # Config / Markup
     ".md": "markdown",
     ".yaml": "yaml",
     ".yml": "yaml",
+    ".toml": "toml",
+    ".json": "json",
+    ".xml": "xml",
+    ".html": "html",
+    ".css": "css",
+    ".scss": "css",
+    # SQL
+    ".sql": "sql",
 }
 
 

@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+  body {
+    font-family: theme('fontFamily.sans');
+    color: #212121;
+    background: #ffffff;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100svh;
+  }
+  h1, h2, h3, h4, h5, h6 { font-family: theme('fontFamily.display'); }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #d9d9dd; border-radius: 9999px; }
+  :focus-visible { outline: 2px solid #4c6ee6; outline-offset: 2px; border-radius: 2px; }
+}
+
+@layer utilities {
+  .skeleton {
+    background: linear-gradient(90deg, #f5f5f5 25%, #eeece7 50%, #f5f5f5 75%);
+    background-size: 800px 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+    border-radius: 4px;
+  }
+  .spin { animation: spin 0.85s linear infinite; }
+  .cursor {
+    display: inline-block; width: 2px; height: 1em;
+    background: #ff7759; animation: blink 1.1s step-end infinite;
+    vertical-align: text-bottom; margin-left: 2px;
+  }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+@keyframes spin   { to { transform: rotate(360deg); } }
+@keyframes blink  { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
