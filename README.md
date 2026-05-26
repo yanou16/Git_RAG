@@ -1,3 +1,12 @@
+##. System Architecture
+
+<img width="829" height="552" alt="image" src="https://github.com/user-attachments/assets/e7ae94b1-d71f-4fe3-879b-44ef9d96fd34" />
+
+##.  RAG Pipeline (detailed)
+
+<img width="613" height="551" alt="image" src="https://github.com/user-attachments/assets/7dad1a8d-1c6e-4f9a-8e99-72e706f40ec5" />
+
+
 ---
 title: GitRAG API
 emoji: 🔍
