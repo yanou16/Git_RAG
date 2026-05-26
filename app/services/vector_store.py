@@ -53,9 +53,21 @@ class VectorStore:
             for c in chunks
         ]
 
-        collection.upsert(
-            ids=ids, documents=documents, embeddings=embeddings, metadatas=metadatas
-        )
+        BATCH = 5000
+        for start in range(0, len(ids), BATCH):
+            end = start + BATCH
+            collection.upsert(
+                ids=ids[start:end],
+                documents=documents[start:end],
+                embeddings=embeddings[start:end],
+                metadatas=metadatas[start:end],
+            )
+            log.info(
+                "chunks_stored_batch",
+                repo_id=repo_id,
+                batch_start=start,
+                batch_end=min(end, len(ids)),
+            )
 
         log.info("chunks_stored", repo_id=repo_id, count=len(chunks))
         return len(chunks)
